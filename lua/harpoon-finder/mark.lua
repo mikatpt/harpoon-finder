@@ -2,7 +2,7 @@ local harpoon = require('harpoon')
 local finder = require('harpoon-finder')
 local log = require('harpoon.dev').log
 local tree = require('harpoon-finder.tree')
-local tree_root = finder.get_finder_config().marks
+local config = finder.get_finder_config()
 local utils = require('harpoon-finder.utils')
 
 local M = {}
@@ -54,12 +54,12 @@ end
 
 local function create_mark(path)
     log.trace(string.format('_create_mark(): Creating mark for folder %s', path))
-    tree.add_path(tree_root, path)
+    tree.add_path(config.marks, path)
 end
 
 local function mark_exists(buf_name)
     log.trace('_mark_exists()')
-    if tree.path_exists(tree_root, buf_name) then
+    if tree.path_exists(config.marks, buf_name) then
         log.debug('_mark_exists(): Mark exists', buf_name)
         return true
     end
@@ -77,18 +77,14 @@ local function validate_buf_name(buf_name)
     end
 end
 
-M.add_dir = function(dir_name_or_buf_id)
-    local buf_name = get_buf_name(dir_name_or_buf_id)
+M.add_dir = function(buf_name)
     log.trace('add_file():', buf_name)
-
-    validate_buf_name(buf_name)
     create_mark(buf_name)
     emit_changed()
 end
 
-M.rm_dir = function(dir_name_or_buf_id)
-    local buf_name = get_buf_name(dir_name_or_buf_id)
-    local was_removed = tree.remove_path(tree_root, buf_name)
+M.rm_dir = function(buf_name)
+    local was_removed = tree.remove_path(config.marks, buf_name)
     log.trace('rm_file(): Removing mark for folder ', buf_name)
 
     if was_removed then
@@ -107,6 +103,10 @@ M.toggle_dir = function(dir_name_or_buf_id)
         print('Harpoon Finder: Mark removed')
         log.debug('toggle_file(): Mark removed')
     else
+        if config.marks.order == 1 then
+            vim.notify("You've already added the root dir! Extra marks will have no effect :(", vim.log.levels.WARN)
+            return
+        end
         M.add_dir(buf_name)
         print('Harpoon Finder: Mark added')
         log.debug('toggle_file(): Mark added')

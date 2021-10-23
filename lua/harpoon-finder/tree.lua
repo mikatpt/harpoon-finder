@@ -6,23 +6,23 @@ local projects = {
         finder = {
             marks = {
                 order = nil,
-                children = {},
+                _c = {},
             },
         },
     },
 }
 
-children = {
+_c = {
     "src" = {
         order = nil,
-        children = {
+        _c = {
             "config" = {
-                "nvim" =  { order = 1, children = {}},
-                "tmux" =  { order = 2, children = {}}
+                "nvim" =  { order = 1, _c = {}},
+                "tmux" =  { order = 2, _c = {}}
             },
         }
     },
-    "misc" = { order = 3, children = {}},
+    "misc" = { order = 3, _c = {}},
 }
 
 Array = {
@@ -33,6 +33,7 @@ Array = {
 ]]
 
 local M = {}
+local config = require('harpoon-finder').get_finder_config()
 
 local function _traverse_and_flatten_tree(marks, root, path)
     if not root then return end
@@ -41,9 +42,9 @@ local function _traverse_and_flatten_tree(marks, root, path)
         table.insert(marks, { order = root.order, path = string.sub(path, 2) })
     end
 
-    if not root.children then return end
+    if not root._c then return end
 
-    for child_name, child_node in pairs(root.children) do
+    for child_name, child_node in pairs(root._c) do
         _traverse_and_flatten_tree(marks, child_node, path .. '/' .. child_name)
     end
 end
@@ -65,25 +66,26 @@ local function _traverse_and_add_dir(root, path, order)
         -- If we find a dir which is already saved we should stop traversing; we're only interested in parent directories.
         if dirname == '' or n.order ~= nil then goto CONTINUE end
 
-        if n.children[dirname] == nil then
-            n.children[dirname] = { children = {} }
+        if n._c[dirname] == nil then
+            n._c[dirname] = { _c = {} }
         end
-        n = n.children[dirname]
+        n = n._c[dirname]
         ::CONTINUE::
     end
 
     n.order = order
 
     -- Remove children nodes if they exist; again, we only care about parent directories.
-    n.children = { children = {} }
+    n._c = { _c = {} }
 end
 
 local function _traverse_and_remove(root, path, dirname)
-    if not root.children then return end
-    for name, child in pairs(root.children) do
+    if not root._c then return end
+
+    for name, child in pairs(root._c) do
         local p = dirname .. '/' .. name
         if path == p then
-            root.children[name] = nil
+            root._c[name] = nil
             return true
         end
         if _traverse_and_remove(child, path, p) then
@@ -95,12 +97,13 @@ end
 
 -- Check if a directory exists in the tree. Optionally, remove it.
 local function _exists_and_remove(root, path_to_check, dirname, remove)
-    if not root.children then return false end
-    for name, child in pairs(root.children) do
+    if not root._c then return false end
+
+    for name, child in pairs(root._c) do
         local next_dir = dirname .. '/' .. name
 
         if path_to_check == next_dir then
-            if remove then root.children[name] = nil end
+            if remove then root._c[name] = nil end
             return true
         end
 
@@ -128,13 +131,12 @@ end
 
 -- Iterates through given string array and builds a new tree using the given paths.
 M.build_tree = function(marks)
-    if marks and marks[1] == '.' then
-        return { ['.'] = { order = 1, children = {}, max = 1, len = 1 } }
-    end
-
-    local root = { children = {}, max = #marks, len = #marks }
+    local root = { _c = {}, max = #marks, len = #marks }
 
     for index, path in pairs(marks) do
+        if path == '.' then
+            return { order = 1, _c = {}, max = 1, len = 1 }
+        end
         _traverse_and_add_dir(root, path, index)
     end
 
@@ -144,6 +146,12 @@ end
 -- Adds a single path to the tree.
 M.add_path = function(root, path)
     if vim.fn.isdirectory(path) == 0 then return end
+
+    if path == '.' then
+        config.marks = { order = 1, _c = {}, max = 1, len = 1 }
+        return
+    end
+
     root.max = root.max + 1
     root.len = root.len + 1
     _traverse_and_add_dir(root, path, root.max)
@@ -152,7 +160,7 @@ end
 -- Remove a single path from the tree, if it exists.
 M.remove_path = function(root, path)
     if path == '.' then
-        root = { children = {} }
+        config.marks = { _c = {}, max = 0, len = 0 }
         return true
     end
 
@@ -165,7 +173,9 @@ end
 
 -- Check if a path is in the tree.
 M.path_exists = function(root, path)
-    if path == '.' then return true end
+    if path == '.' then
+        return root.order == 1
+    end
     return _exists_and_remove(root, './' .. path, '.', false)
 end
 
