@@ -131,11 +131,11 @@ end
 
 -- Iterates through given string array and builds a new tree using the given paths.
 M.build_tree = function(marks)
-    local root = { _c = {}, max = #marks, len = #marks }
+    local root = { _c = {}, max = #marks }
 
     for index, path in pairs(marks) do
         if path == '.' then
-            return { order = 1, _c = {}, max = 1, len = 1 }
+            return { order = 1, _c = {}, max = 1 }
         end
         _traverse_and_add_dir(root, path, index)
     end
@@ -148,24 +148,22 @@ M.add_path = function(root, path)
     if vim.fn.isdirectory(path) == 0 then return end
 
     if path == '.' then
-        config.marks = { order = 1, _c = {}, max = 1, len = 1 }
+        config.marks = { order = 1, _c = {}, max = 1 }
         return
     end
 
     root.max = root.max + 1
-    root.len = root.len + 1
     _traverse_and_add_dir(root, path, root.max)
 end
 
 -- Remove a single path from the tree, if it exists.
 M.remove_path = function(root, path)
     if path == '.' then
-        config.marks = { _c = {}, max = 0, len = 0 }
+        config.marks = { _c = {}, max = 0 }
         return true
     end
 
     if _exists_and_remove(root, './' .. path, '.', true) then
-        root.len = root.len - 1
         return true
     end
     return false

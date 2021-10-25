@@ -39,7 +39,7 @@ M.ensure_correct_config = function(config)
                 cmds = {},
             },
             finder = {
-                marks = { _c = {}, max = 0, len = 0 },
+                marks = { _c = {}, max = 0 },
             },
         }
     end
@@ -47,7 +47,7 @@ M.ensure_correct_config = function(config)
     local proj = projects[vim.loop.cwd()]
 
     if proj.finder == nil then
-        proj.finder = { marks = { _c = {}, max = 0, len = 0 } }
+        proj.finder = { marks = { _c = {}, max = 0 } }
     end
 
     return config
