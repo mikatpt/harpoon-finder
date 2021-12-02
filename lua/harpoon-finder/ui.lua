@@ -156,6 +156,7 @@ M.find_files = function(opts)
     opts = opts or {}
     opts.prompt_title = 'Harpoon Finder'
     opts.search_dirs = M.get_search_dirs()
+    opts.hidden = true
 
     telescope.find_files(opts)
 end
