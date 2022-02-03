@@ -1,3 +1,4 @@
+-- stylua: ignore start
 --[[
 Standard n-ary tree. Each tree node has an order and children.
 
@@ -62,15 +63,14 @@ end
 local function _traverse_and_add_dir(root, path, order)
     local n = root
 
-    for _, dirname in pairs(_split(path, '/')) do
+    for _, dirname in ipairs(_split(path, '/')) do
         -- If we find a dir which is already saved we should stop traversing; we're only interested in parent directories.
-        if dirname == '' or n.order ~= nil then goto CONTINUE end
+        if dirname == '' or n.order ~= nil then break end
 
         if n._c[dirname] == nil then
             n._c[dirname] = { _c = {} }
         end
         n = n._c[dirname]
-        ::CONTINUE::
     end
 
     n.order = order
@@ -79,36 +79,23 @@ local function _traverse_and_add_dir(root, path, order)
     n._c = { _c = {} }
 end
 
-local function _traverse_and_remove(root, path, dirname)
-    if not root._c then return end
-
-    for name, child in pairs(root._c) do
-        local p = dirname .. '/' .. name
-        if path == p then
-            root._c[name] = nil
-            return true
-        end
-        if _traverse_and_remove(child, path, p) then
-            return true
-        end
-    end
-    return false
-end
-
 -- Check if a directory exists in the tree. Optionally, remove it.
-local function _exists_and_remove(root, path_to_check, dirname, remove)
+local function _exists_and_remove(root, path_to_check, remove)
     if not root._c then return false end
 
-    for name, child in pairs(root._c) do
-        local next_dir = dirname .. '/' .. name
+    local node = root
 
-        if path_to_check == next_dir then
-            if remove then root._c[name] = nil end
+    for _, child_name in ipairs(_split(path_to_check, '/')) do
+        local next_child = node._c[child_name]
+        if not next_child then return false end
+
+        if next_child.order ~= nil then
+            if remove then node._c[child_name] = nil end
             return true
         end
-
-        if _exists_and_remove(child, path_to_check, next_dir, remove) then return true end
+        node = next_child
     end
+
     return false
 end
 
@@ -163,18 +150,14 @@ M.remove_path = function(root, path)
         return true
     end
 
-    if _exists_and_remove(root, './' .. path, '.', true) then
-        return true
-    end
+    if _exists_and_remove(root, path, true) then return true end
     return false
 end
 
 -- Check if a path is in the tree.
 M.path_exists = function(root, path)
-    if path == '.' then
-        return root.order == 1
-    end
-    return _exists_and_remove(root, './' .. path, '.', false)
+    if path == '.' then return root.order == 1 end
+    return _exists_and_remove(root, path, false)
 end
 
 return M
