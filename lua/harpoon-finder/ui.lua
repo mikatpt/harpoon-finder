@@ -1,6 +1,6 @@
 local harpoon = require('harpoon')
 local telescope = require('telescope.builtin')
-local popup = require('popup')
+local popup = require('plenary.popup')
 local log = require('harpoon.dev').log
 local tree = require('harpoon-finder.tree')
 local config = require('harpoon-finder').get_finder_config()
